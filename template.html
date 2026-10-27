@@ -1,0 +1,393 @@
+<title>Energy & FX Market Monitor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Weekly monitor of crude oil, natural gas and USD/EUR/CNY exchange rates — AD International Consulting">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a market terminal on paper — masthead, reading strip, tile row, then chart panels in a two-column grid that collapses to one. */
+:root{
+  --paper:#EFE8DC; --panel:#F7F2EA; --ink:#17140F; --ink-2:#5B5346; --ink-3:#8C8272;
+  --rule:#D9CFBF; --gold:#A97C2F; --gold-2:#C9A45C; --bronze:#7A5524;
+  --up:#2F6B4F; --down:#9B3A2E; --warn:#B07A12;
+  --s1:#A97C2F; --s2:#17140F; --s3:#6E7F8C; --s4:#7A5524; --s5:#B9A27A;
+  --band80:rgba(169,124,47,.28); --band95:rgba(169,124,47,.12);
+  --display:"Montserrat",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Montserrat",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#121110; --panel:#1B1916; --ink:#EEE6D8; --ink-2:#B9AE9C; --ink-3:#857B6C;
+  --rule:#2E2A24; --gold:#D2AE68; --gold-2:#E3C68C; --bronze:#B88A4A;
+  --up:#6FB892; --down:#E07F6F; --warn:#E0B04F;
+  --s1:#D2AE68; --s2:#EEE6D8; --s3:#8FA6B6; --s4:#B88A4A; --s5:#7E715C;
+  --band80:rgba(210,174,104,.30); --band95:rgba(210,174,104,.13);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#121110; --panel:#1B1916; --ink:#EEE6D8; --ink-2:#B9AE9C; --ink-3:#857B6C;
+  --rule:#2E2A24; --gold:#D2AE68; --gold-2:#E3C68C; --bronze:#B88A4A;
+  --up:#6FB892; --down:#E07F6F; --warn:#E0B04F;
+  --s1:#D2AE68; --s2:#EEE6D8; --s3:#8FA6B6; --s4:#B88A4A; --s5:#7E715C;
+  --band80:rgba(210,174,104,.30); --band95:rgba(210,174,104,.13);
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+.mono,.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* masthead */
+.mast{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;
+  padding-block:32px 18px;border-bottom:2px solid var(--ink)}
+.brand{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.mast h1{font-size:clamp(28px,4.6vw,44px);font-weight:300;letter-spacing:-.01em;line-height:1.05;margin-top:8px}
+.mast h1 b{font-weight:700}
+.asof{font-size:12px;color:var(--ink-2);text-align:right;display:flex;flex-direction:column;gap:2px}
+.asof .num{color:var(--ink)}
+
+/* reading strip */
+.readings{display:grid;grid-template-columns:150px 1fr;gap:20px;align-items:start}
+.readings .lbl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);font-weight:600;padding-top:3px}
+.readings ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-width:80ch}
+.readings li{padding-left:18px;position:relative}
+.readings li::before{content:"";position:absolute;left:0;top:.7em;width:8px;height:1px;background:var(--gold)}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.tile{padding:18px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.tile+.tile{border-left:1px solid var(--rule)}
+.tile .name{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+.tile .unit{color:var(--ink-3);font-weight:500;letter-spacing:.06em}
+.tile .val{font-family:var(--mono);font-size:26px;font-weight:500;line-height:1.1}
+.chg{display:flex;gap:12px;font-family:var(--mono);font-size:12px}
+.chg span{display:flex;flex-direction:column}
+.chg i{font-style:normal;color:var(--ink-3);font-family:var(--body);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.up{color:var(--up)} .down{color:var(--down)}
+.range{position:relative;height:4px;background:var(--rule);border-radius:2px;margin-top:4px}
+.range b{position:absolute;top:-4px;width:2px;height:12px;background:var(--ink)}
+.rangelbl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.pill{align-self:flex-start;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+  padding:3px 8px;border-radius:999px;border:1px solid currentColor}
+.pill.hi{color:var(--down)} .pill.mid{color:var(--warn)} .pill.lo{color:var(--up)}
+
+/* panels */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.panel{background:var(--panel);border:1px solid var(--rule);padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel.wide{grid-column:1/-1}
+.phead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px}
+.phead h2{font-size:17px;font-weight:600}
+.phead h2 small{display:block;font-size:12px;font-weight:400;color:var(--ink-2);margin-top:3px;font-family:var(--body)}
+.seg{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--rule)}
+.seg button{font:600 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);
+  background:transparent;border:0;padding:8px 10px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button:focus-visible,.copy:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.controls{display:flex;flex-wrap:wrap;gap:8px}
+.chart{width:100%;height:340px;min-width:0}
+.chart.tall{height:400px}
+.note{font-size:13px;color:var(--ink-2);max-width:75ch;margin:0}
+.note b{color:var(--ink);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;border-top:1px solid var(--rule);padding-top:12px}
+.stats div{display:flex;flex-direction:column;gap:2px}
+.stats i{font-style:normal;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.stats .num{font-size:18px}
+
+/* method */
+.method{display:grid;grid-template-columns:150px 1fr;gap:20px;border-top:2px solid var(--ink);padding-top:20px}
+.method .lbl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.method dl{margin:0;display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:8px 20px;font-size:13px;max-width:900px}
+.method dt{color:var(--ink-2);font-weight:600}
+.method dd{margin:0;color:var(--ink-2)}
+.foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:12px;color:var(--ink-3);border-top:1px solid var(--rule);padding-top:16px}
+.foot a{color:var(--gold)}
+
+@media (max-width:900px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tile+.tile{border-left:0}
+  .tile{border-bottom:1px solid var(--rule)}
+  .tile:nth-child(even){border-left:1px solid var(--rule)}
+  .tile:last-child{grid-column:1/-1;border-bottom:0}
+  .grid{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:620px){
+  .readings,.method{grid-template-columns:minmax(0,1fr);gap:8px}
+  .method dl{grid-template-columns:minmax(0,1fr)}
+  .method dd{margin-bottom:8px}
+  .asof{text-align:left}
+  .chart{height:280px} .chart.tall{height:320px}
+  .stats{grid-template-columns:minmax(0,1fr)}
+  .tile .val{font-size:22px}
+}
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <div class="brand">AD International Consulting · Market Intelligence</div>
+      <h1><b>Energy &amp; FX</b> Market Monitor</h1>
+    </div>
+    <div class="asof">
+      <span>Crude &amp; gas prices to <span class="num" id="asofEnergy">—</span></span>
+      <span>FX reference rates to <span class="num" id="asofFx">—</span></span>
+      <span>Updated <span class="num" id="generated">—</span></span>
+    </div>
+  </header>
+
+  <section class="readings" aria-label="Key readings">
+    <div class="lbl">Key readings</div>
+    <ul id="readings"></ul>
+  </section>
+
+  <section class="tiles" id="tiles" aria-label="Latest values"></section>
+
+  <div class="grid">
+    <section class="panel wide">
+      <div class="phead">
+        <h2>Price history<small id="priceSub">Daily closes</small></h2>
+        <div class="controls">
+          <div class="seg" id="priceSeries" role="group" aria-label="Series"></div>
+          <div class="seg" id="priceRange" role="group" aria-label="Period"></div>
+        </div>
+      </div>
+      <div class="chart tall" id="chPrice"></div>
+    </section>
+
+    <section class="panel">
+      <div class="phead"><h2>Brent–WTI spread<small>USD per barrel, Brent minus WTI</small></h2></div>
+      <div class="chart" id="chSpread"></div>
+      <p class="note" id="spreadNote"></p>
+    </section>
+
+    <section class="panel">
+      <div class="phead"><h2>Realised volatility<small>30-day, annualised, log scale</small></h2></div>
+      <div class="chart" id="chVol"></div>
+      <p class="note">Oil and gas move ten to fifty times more than the major currencies, so the axis is logarithmic.</p>
+    </section>
+
+    <section class="panel">
+      <div class="phead"><h2>Correlation matrix<small id="corrSub">Daily returns, last 90 trading days</small></h2>
+        <div class="seg" id="corrPeriod" role="group" aria-label="Correlation period"></div></div>
+      <div class="chart" id="chCorr"></div>
+    </section>
+
+    <section class="panel">
+      <div class="phead"><h2>Rolling correlation<small>90-day window, daily returns</small></h2>
+        <div class="seg" id="corrPair" role="group" aria-label="Pair"></div></div>
+      <div class="chart" id="chRoll"></div>
+      <p class="note">Values above zero mean the two markets tend to move in the same direction on the same day.</p>
+    </section>
+
+    <section class="panel wide">
+      <div class="phead">
+        <h2>One-month range<small>Where the price is likely to sit in 20 trading days, based on current volatility</small></h2>
+        <div class="seg" id="fcSeries" role="group" aria-label="Forecast series"></div>
+      </div>
+      <div class="chart tall" id="chFc"></div>
+      <div class="stats" id="fcStats"></div>
+      <p class="note" id="fcNote"></p>
+    </section>
+  </div>
+
+  <section class="method" aria-label="Method and sources">
+    <div class="lbl">Method &amp; sources</div>
+    <dl>
+      <dt>Crude oil &amp; gas</dt><dd>Brent and WTI spot (USD/bbl), Henry Hub spot (USD/MMBtu), U.S. Energy Information Administration via FRED, Federal Reserve Bank of St. Louis.</dd>
+      <dt>Exchange rates</dt><dd>European Central Bank euro reference rates. USD/CNY is derived from the ECB's CNY and USD rates against the euro.</dd>
+      <dt>Volatility</dt><dd>Standard deviation of daily log returns over 30 trading days, multiplied by √252.</dd>
+      <dt>Correlation</dt><dd>Pearson correlation of daily log returns, on days where all five markets published a price.</dd>
+      <dt>One-month range</dt><dd>Driftless random walk: the central line is today's price, bands use the last 60 days of volatility (80% and 95%). Tested weekly over the last three years against the realised price 20 trading days later.</dd>
+      <dt>Update</dt><dd>Rebuilt automatically every week from the public sources above.</dd>
+    </dl>
+  </section>
+
+  <footer class="foot">
+    <span>© AD International Consulting · Aurélie Dupassieux</span>
+    <span>For information only. Not investment advice.</span>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
+<script>
+const D = /*__DATA__*/null;
+
+const L = D.meta.labels;
+const SHORT = {brent:"Brent",wti:"WTI",henry_hub:"Henry Hub",eurusd:"EUR/USD",usdcny:"USD/CNY"};
+const UNIT = {brent:"USD/bbl",wti:"USD/bbl",henry_hub:"USD/MMBtu",eurusd:"USD per EUR",usdcny:"CNY per USD"};
+const DEC = {brent:2,wti:2,henry_hub:2,eurusd:4,usdcny:4};
+const KEYS = ["brent","wti","henry_hub","eurusd","usdcny"];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmtPct = (x,d=1) => x==null ? "—" : (x>=0?"+":"−") + Math.abs(x*100).toFixed(d) + "%";
+const fmt = (k,x) => x.toLocaleString("en-US",{minimumFractionDigits:DEC[k],maximumFractionDigits:DEC[k]});
+const fmtDate = s => new Date(s+"T00:00:00Z").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"});
+const color = k => css({brent:"--s1",wti:"--s2",henry_hub:"--s3",eurusd:"--s4",usdcny:"--s5"}[k]);
+
+// volatility regime: where today's 30d vol sits within its own history since 2021
+function volRank(k){
+  const v = D.volatility[k].v, last = v[v.length-1];
+  return v.filter(x=>x<=last).length / v.length;
+}
+
+/* header */
+document.getElementById("asofEnergy").textContent = fmtDate(D.kpis.brent.last_date);
+document.getElementById("asofFx").textContent = fmtDate(D.kpis.eurusd.last_date);
+document.getElementById("generated").textContent = D.meta.generated_utc;
+
+/* tiles */
+document.getElementById("tiles").innerHTML = KEYS.map(k=>{
+  const q = D.kpis[k], r = volRank(k);
+  const pos = Math.max(0,Math.min(100,(q.last-q.low_52w)/(q.high_52w-q.low_52w)*100));
+  const cls = x => x==null?"":(x>=0?"up":"down");
+  const regime = r>=.8?["hi","High vs history"]:r<=.2?["lo","Low vs history"]:["mid","Normal"];
+  return `<article class="tile">
+    <div class="name">${SHORT[k]} <span class="unit">${UNIT[k]}</span></div>
+    <div class="val">${fmt(k,q.last)}</div>
+    <div class="chg">
+      <span><i>1W</i><b class="${cls(q.chg_1w)}">${fmtPct(q.chg_1w)}</b></span>
+      <span><i>1M</i><b class="${cls(q.chg_1m)}">${fmtPct(q.chg_1m)}</b></span>
+      <span><i>YTD</i><b class="${cls(q.chg_ytd)}">${fmtPct(q.chg_ytd)}</b></span>
+    </div>
+    <div class="range" title="52-week range"><b style="left:calc(${pos}% - 1px)"></b></div>
+    <div class="rangelbl"><span>${fmt(k,q.low_52w)}</span><span>52W</span><span>${fmt(k,q.high_52w)}</span></div>
+    <span class="pill ${regime[0]}" title="30-day volatility ${(q.vol_30d*100).toFixed(1)}%, percentile ${(r*100).toFixed(0)} since 2021">Vol ${(q.vol_30d*100).toFixed(1)}% · ${regime[1]}</span>
+  </article>`;
+}).join("");
+
+/* key readings — generated from the data */
+(function(){
+  const b=D.kpis.brent, w=D.kpis.wti, h=D.kpis.henry_hub, e=D.kpis.eurusd, c=D.kpis.usdcny;
+  const corrKeys=D.corr_matrix.keys, M=D.corr_matrix.recent;
+  const rho=(a,z)=>M[corrKeys.indexOf(a)][corrKeys.indexOf(z)];
+  const items=[
+    `Brent closed at <b class="num">$${fmt("brent",b.last)}</b>, ${fmtPct(b.chg_ytd)} since the start of the year and ${fmtPct(b.chg_1m)} over the past month. Its 52-week range runs from $${fmt("brent",b.low_52w)} to $${fmt("brent",b.high_52w)}.`,
+    `Oil volatility is at <b class="num">${(b.vol_30d*100).toFixed(0)}%</b> annualised, higher than ${(volRank("brent")*100).toFixed(0)}% of readings since 2021. A one-standard-deviation monthly move is about ±${(b.vol_30d/Math.sqrt(12)*100).toFixed(0)}%.`,
+    `Brent trades <b class="num">$${D.spread.last.toFixed(2)}</b> above WTI, against a one-year average of $${D.spread.avg_1y.toFixed(2)}.`,
+    `The dollar is ${e.chg_ytd<0?"weaker":"stronger"} this year: EUR/USD ${fmtPct(e.chg_ytd)} and USD/CNY ${fmtPct(c.chg_ytd)}, with USD/CNY at <b class="num">${fmt("usdcny",c.last)}</b>.`,
+    `Over the last 90 days, Brent's daily moves were ${Math.abs(rho("brent","usdcny"))<.15?"almost unrelated to":"linked to"} USD/CNY (correlation ${rho("brent","usdcny").toFixed(2)}) and ${Math.abs(rho("brent","henry_hub"))<.15?"almost unrelated to":"linked to"} U.S. gas (${rho("brent","henry_hub").toFixed(2)}).`
+  ];
+  document.getElementById("readings").innerHTML = items.map(t=>`<li>${t}</li>`).join("");
+})();
+
+/* plot helpers */
+const CFG = {displayModeBar:false,responsive:true};
+function baseLayout(extra={}){
+  const ink=css("--ink"), ink2=css("--ink-2"), rule=css("--rule");
+  return Object.assign({
+    paper_bgcolor:"rgba(0,0,0,0)", plot_bgcolor:"rgba(0,0,0,0)",
+    font:{family:"Montserrat, system-ui, sans-serif",size:11,color:ink2},
+    margin:{l:52,r:16,t:8,b:36},
+    xaxis:{gridcolor:rule,linecolor:rule,zeroline:false,tickfont:{family:"IBM Plex Mono, monospace",size:10}},
+    yaxis:{gridcolor:rule,linecolor:rule,zeroline:false,tickfont:{family:"IBM Plex Mono, monospace",size:10}},
+    hoverlabel:{bgcolor:css("--panel"),bordercolor:css("--gold"),font:{family:"IBM Plex Mono, monospace",color:ink,size:11}},
+    legend:{orientation:"h",y:1.08,x:0,font:{size:11,color:ink2}},
+    hovermode:"x unified"
+  },extra);
+}
+function seg(id, opts, active, onPick){
+  const el=document.getElementById(id);
+  el.innerHTML=opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${v===active}">${l}</button>`).join("");
+  el.addEventListener("click",ev=>{
+    const b=ev.target.closest("button"); if(!b) return;
+    el.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    onPick(b.dataset.v);
+  });
+}
+function since(series, months){
+  if(!months) return series;
+  const end=new Date(series.d[series.d.length-1]); end.setMonth(end.getMonth()-months);
+  const cut=end.toISOString().slice(0,10); const i=series.d.findIndex(d=>d>=cut);
+  return {d:series.d.slice(i), v:series.v.slice(i)};
+}
+
+/* state */
+const S = {price:"brent", range:"12", corr:"recent", pair:"brent|usdcny", fc:"brent"};
+
+function drawPrice(){
+  const k=S.price, s=since(D.prices[k], +S.range||0);
+  document.getElementById("priceSub").textContent = `${L[k]} · daily closes`;
+  Plotly.react("chPrice",[{x:s.d,y:s.v,type:"scatter",mode:"lines",name:SHORT[k],
+    line:{color:color(k),width:1.8},fill:"tozeroy",fillcolor:css("--band95"),
+    hovertemplate:`%{y:.${DEC[k]}f} ${UNIT[k]}<extra></extra>`}],
+    baseLayout({showlegend:false,yaxis:Object.assign(baseLayout().yaxis,{range:rangeOf(s.v,.06),title:{text:UNIT[k],font:{size:10}}})}),CFG);
+}
+function rangeOf(v,p){const lo=Math.min(...v),hi=Math.max(...v),pad=(hi-lo)*p||hi*.01;return [lo-pad,hi+pad];}
+
+function drawSpread(){
+  const s=since(D.spread,36);
+  Plotly.react("chSpread",[{x:s.d,y:s.v,type:"scatter",mode:"lines",line:{color:css("--gold"),width:1.4},
+    hovertemplate:"$%{y:.2f}<extra></extra>",name:"Spread"},
+    {x:[s.d[0],s.d[s.d.length-1]],y:[D.spread.avg_1y,D.spread.avg_1y],type:"scatter",mode:"lines",
+     line:{color:css("--ink-3"),width:1,dash:"dot"},name:"1-year average",hoverinfo:"skip"}],
+    baseLayout({showlegend:true}),CFG);
+  document.getElementById("spreadNote").innerHTML=`Latest <b class="num">$${D.spread.last.toFixed(2)}</b>, one-year average <b class="num">$${D.spread.avg_1y.toFixed(2)}</b>. A wider spread makes U.S. crude more attractive to Asian buyers.`;
+}
+
+function drawVol(){
+  const tr=KEYS.map(k=>{const s=since(D.volatility[k],36);
+    return {x:s.d,y:s.v.map(x=>x*100),type:"scatter",mode:"lines",name:SHORT[k],line:{color:color(k),width:1.4},
+      hovertemplate:`${SHORT[k]} %{y:.1f}%<extra></extra>`};});
+  Plotly.react("chVol",tr,baseLayout({yaxis:Object.assign(baseLayout().yaxis,{type:"log",ticksuffix:"%"})}),CFG);
+}
+
+function drawCorr(){
+  const ks=D.corr_matrix.keys, M=D.corr_matrix[S.corr], lab=ks.map(k=>SHORT[k]);
+  document.getElementById("corrSub").textContent = S.corr==="recent"
+    ? `Daily returns since ${fmtDate(D.corr_matrix.window_start)} (90 trading days)` : `Daily returns since ${fmtDate(D.meta.start)}`;
+  const neg=css("--s3"), pos=css("--gold"), mid=css("--panel");
+  Plotly.react("chCorr",[{z:M,x:lab,y:lab,type:"heatmap",zmin:-1,zmax:1,
+    colorscale:[[0,neg],[.5,mid],[1,pos]],showscale:false,
+    text:M.map(r=>r.map(v=>v.toFixed(2))),texttemplate:"%{text}",
+    textfont:{family:"IBM Plex Mono, monospace",size:11,color:css("--ink")},
+    hovertemplate:"%{y} × %{x}: %{z:.2f}<extra></extra>",xgap:2,ygap:2}],
+    baseLayout({margin:{l:78,r:8,t:8,b:40},hovermode:"closest",
+      xaxis:{tickfont:{size:10,color:css("--ink-2")},showgrid:false},
+      yaxis:{tickfont:{size:10,color:css("--ink-2")},showgrid:false,autorange:"reversed"}}),CFG);
+}
+
+function drawRoll(){
+  const s=since(D.rolling_corr[S.pair],60);
+  const [a,b]=S.pair.split("|");
+  Plotly.react("chRoll",[{x:s.d,y:s.v,type:"scatter",mode:"lines",line:{color:css("--gold"),width:1.5},
+    fill:"tozeroy",fillcolor:css("--band95"),hovertemplate:`${SHORT[a]} × ${SHORT[b]} %{y:.2f}<extra></extra>`}],
+    baseLayout({showlegend:false,yaxis:Object.assign(baseLayout().yaxis,{range:[-1,1],zeroline:true,zerolinecolor:css("--ink-3")})}),CFG);
+}
+
+function drawFc(){
+  const k=S.fc, f=D.forecast[k], h=since(D.prices[k],6), last=h.v[h.v.length-1];
+  const xs=[h.d[h.d.length-1],...f.d];
+  const band=(lo,hi,fill,name)=>[
+    {x:xs,y:[last,...hi],type:"scatter",mode:"lines",line:{width:0},hoverinfo:"skip",showlegend:false},
+    {x:xs,y:[last,...lo],type:"scatter",mode:"lines",line:{width:0},fill:"tonexty",fillcolor:fill,name,hoverinfo:"skip"}];
+  Plotly.react("chFc",[
+    ...band(f.lo95,f.hi95,css("--band95"),"95% range"),
+    ...band(f.lo80,f.hi80,css("--band80"),"80% range"),
+    {x:h.d,y:h.v,type:"scatter",mode:"lines",name:"History",line:{color:css("--ink"),width:1.6},hovertemplate:`%{y:.${DEC[k]}f}<extra></extra>`},
+    {x:xs,y:[last,...f.median],type:"scatter",mode:"lines",name:"Today's level",line:{color:css("--gold"),width:1.4,dash:"dot"},hoverinfo:"skip"},
+    {x:[xs[xs.length-1],xs[xs.length-1]],y:[f.lo80[f.lo80.length-1],f.hi80[f.hi80.length-1]],type:"scatter",mode:"markers+text",
+     marker:{color:css("--gold"),size:6},text:[fmt(k,f.lo80.at(-1)),fmt(k,f.hi80.at(-1))],textposition:["bottom left","top left"],
+     textfont:{family:"IBM Plex Mono, monospace",size:11,color:css("--ink")},showlegend:false,hoverinfo:"skip"}
+  ],baseLayout({hovermode:"x",yaxis:Object.assign(baseLayout().yaxis,{title:{text:UNIT[k],font:{size:10}}})}),CFG);
+  const bt=f.backtest;
+  document.getElementById("fcStats").innerHTML=`
+    <div><i>80% range in 20 days</i><span class="num">${fmt(k,f.lo80.at(-1))} – ${fmt(k,f.hi80.at(-1))}</span></div>
+    <div><i>Typical one-month move, last ${bt.years} years</i><span class="num">±${(bt.mape*100).toFixed(1)}%</span></div>
+    <div><i>Backtest hit rate of the 80% band</i><span class="num">${(bt.coverage_80*100).toFixed(0)}% <small style="color:var(--ink-3)">of ${bt.n_forecasts} tests</small></span></div>`;
+  document.getElementById("fcNote").innerHTML=`This is a range, not a price target. Market prices are hard to beat at a one-month horizon, so the central line is simply today's level. The value is in the width of the band: tested every week over three years, the actual price landed inside the 80% band <b>${(bt.coverage_80*100).toFixed(0)}%</b> of the time, close to the 80% it promises.`;
+}
+
+function drawAll(){drawPrice();drawSpread();drawVol();drawCorr();drawRoll();drawFc();}
+
+seg("priceSeries",KEYS.map(k=>[k,SHORT[k]]),S.price,v=>{S.price=v;drawPrice();});
+seg("priceRange",[["6","6M"],["12","1Y"],["36","3Y"],["0","Since 2021"]],S.range,v=>{S.range=v;drawPrice();});
+seg("corrPeriod",[["recent","90 days"],["full_period","Since 2021"]],S.corr,v=>{S.corr=v;drawCorr();});
+seg("corrPair",[["brent|usdcny","Brent × CNY"],["brent|eurusd","Brent × EUR"],["brent|henry_hub","Brent × Gas"],["brent|wti","Brent × WTI"]],S.pair,v=>{S.pair=v;drawRoll();});
+seg("fcSeries",[["brent","Brent"],["eurusd","EUR/USD"],["usdcny","USD/CNY"]],S.fc,v=>{S.fc=v;drawFc();});
+
+if(window.Plotly){drawAll();
+  // redraw charts in the new palette when the theme changes
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change",drawAll);
+  new MutationObserver(drawAll).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+}
+</script>
