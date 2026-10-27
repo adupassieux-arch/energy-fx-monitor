@@ -13,4 +13,13 @@ python build_briefing.py --data ../data/data.json \
 - Exhibits on their own line: `[[chart:oil]]`, `[[chart:spread]]`, `[[chart:gas]]`, `[[chart:fx]]`, `[[chart:vol]]`, `[[chart:fan]]`, `[[table:kpis]]`, `[[table:ranges]]`, `[[table:brent_ccy]]`.
 - Every outside fact carries a numbered reference to the Sources list at the end.
 
-`issues/2026-11` is the public sample issue. Fonts: Montserrat and IBM Plex Mono (SIL Open Font License).
+**Languages** — add `lang: zh` to the front matter for Chinese (labels, dates, fonts). Chinese needs the Noto Sans SC fonts, not stored here because of their size:
+
+```bash
+for w in Regular Medium Bold; do curl -L -o fonts/NotoSansSC-$w.otf \
+  https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/SubsetOTF/SC/NotoSansSC-$w.otf; done
+```
+
+**What is public** — `issues/TEMPLATE.md` (structure of a full issue) and each month's one-page summaries (`summary.en.md`, `summary.zh.md`). Full issues are for subscribers and are never committed here.
+
+Fonts: Montserrat, IBM Plex Mono and Noto Sans SC (SIL Open Font License).

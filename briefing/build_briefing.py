@@ -74,7 +74,7 @@ class Data:
             if field.startswith("chg"):
                 return pct(v)
             if field == "last_date":
-                return pd.Timestamp(v).strftime("%-d %B %Y")
+                return pd.Timestamp(v).strftime("%Y年%-m月%-d日" if LANG == "zh" else "%-d %B %Y")
             return num(k, v)
         if parts[0] == "spread":
             return f"${self.d['spread'][parts[1]]:.2f}"
@@ -238,19 +238,35 @@ def chart_fan(D, k="brent", months=6):
 
 
 # ---------- tables ----------
+I18N = {
+    "en": dict(market="Market", last="Last", asof="As of", m1="1 month", ytd="Year to date", r52="52-week range", vol="Volatility",
+               names=SHORT, units=UNIT, brand="AD International Consulting · Market Intelligence",
+               h1="<b>Energy</b> Market Briefing", data_to="Data to", footer="AD International Consulting · Energy Market Briefing · {issue}",
+               page="Page <span class=\"pageNumber\"></span> of <span class=\"totalPages\"></span>", date="%-d %b"),
+    "zh": dict(market="市场", last="最新", asof="截至", m1="近1个月", ytd="年初至今", r52="52周区间", vol="波动率",
+               names={"brent": "布伦特原油", "wti": "WTI原油", "henry_hub": "亨利港天然气", "eurusd": "欧元/美元", "usdcny": "美元/人民币"},
+               units={"brent": "美元/桶", "wti": "美元/桶", "henry_hub": "美元/百万英热", "eurusd": "每欧元兑美元", "usdcny": "每美元兑人民币"},
+               brand="AD International Consulting · 市场情报", h1="<b>能源</b>市场简报", data_to="数据截至",
+               footer="AD International Consulting · 能源市场简报 · {issue}",
+               page="第 <span class=\"pageNumber\"></span> / <span class=\"totalPages\"></span> 页", date="%-m月%-d日"),
+}
+LANG = "en"
+
+
 def table_kpis(D):
+    T = I18N[LANG]
     rows = []
     for k in ["brent", "wti", "henry_hub", "eurusd", "usdcny"]:
         q = D.d["kpis"][k]
         def cell(x):
             cls = "up" if x is not None and x >= 0 else "down"
             return f'<td class="n {cls}">{pct(x)}</td>'
-        rows.append(f"<tr><th>{SHORT[k]}<span>{UNIT[k]}</span></th><td class='n b'>{num(k, q['last'])}</td>"
-                    f"<td class='n'>{pd.Timestamp(q['last_date']):%-d %b}</td>{cell(q['chg_1m'])}{cell(q['chg_ytd'])}"
+        rows.append(f"<tr><th>{T['names'][k]}<span>{T['units'][k]}</span></th><td class='n b'>{num(k, q['last'])}</td>"
+                    f"<td class='n'>{pd.Timestamp(q['last_date']).strftime(T['date'])}</td>{cell(q['chg_1m'])}{cell(q['chg_ytd'])}"
                     f"<td class='n'>{num(k, q['low_52w'])} – {num(k, q['high_52w'])}</td>"
                     f"<td class='n'>{q['vol_30d']*100:.1f}%</td></tr>")
-    return ("<table class='data'><thead><tr><th>Market</th><th>Last</th><th>As of</th><th>1 month</th>"
-            "<th>Year to date</th><th>52-week range</th><th>Volatility</th></tr></thead><tbody>"
+    return (f"<table class='data'><thead><tr><th>{T['market']}</th><th>{T['last']}</th><th>{T['asof']}</th><th>{T['m1']}</th>"
+            f"<th>{T['ytd']}</th><th>{T['r52']}</th><th>{T['vol']}</th></tr></thead><tbody>"
             + "".join(rows) + "</tbody></table>")
 
 
@@ -320,10 +336,13 @@ CSS = """
 @font-face{font-family:Montserrat;font-weight:700;src:url(fonts/Montserrat-Bold.ttf)}
 @font-face{font-family:Plex;font-weight:400;src:url(fonts/ibm-plex-mono-latin-400-normal.woff2)}
 @font-face{font-family:Plex;font-weight:500;src:url(fonts/ibm-plex-mono-latin-500-normal.woff2)}
+@font-face{font-family:"Noto Sans SC";font-weight:400;src:url(fonts/NotoSansSC-Regular.otf)}
+@font-face{font-family:"Noto Sans SC";font-weight:500 600;src:url(fonts/NotoSansSC-Medium.otf)}
+@font-face{font-family:"Noto Sans SC";font-weight:700;src:url(fonts/NotoSansSC-Bold.otf)}
 :root{--paper:#F6F1E8;--ink:#17140F;--ink2:#5B5346;--ink3:#8C8272;--rule:#D9CFBF;--gold:#A97C2F;--up:#2F6B4F;--down:#9B3A2E}
 @page{size:A4;margin:16mm 16mm 18mm;background:#F6F1E8}
 html{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:var(--paper)}
-body{margin:0;font-family:Montserrat,sans-serif;font-size:9.4pt;line-height:1.55;color:var(--ink)}
+body{margin:0;font-family:Montserrat,"Noto Sans SC",sans-serif;font-size:9.4pt;line-height:1.55;color:var(--ink)}
 .page{break-after:page}
 .page:last-child{break-after:auto}
 h1,h2,h3{text-wrap:balance;margin:0}
@@ -367,7 +386,7 @@ a{color:var(--gold);text-decoration:none}
 """
 
 FOOTER = """<div style="width:100%;font-family:Montserrat,sans-serif;font-size:6.5pt;color:#8C8272;padding:0 16mm;display:flex;justify-content:space-between">
-<span>AD International Consulting · Energy Market Briefing · {issue}</span><span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>"""
+<span>{footer}</span><span>{page}</span></div>"""
 
 
 def front_matter(text):
@@ -385,7 +404,7 @@ async def to_pdf(html_path, pdf_path, issue):
         await pg.evaluate("document.fonts.ready")
         await pg.pdf(path=str(pdf_path), format="A4", print_background=True, prefer_css_page_size=True,
                      display_header_footer=True, header_template="<span></span>",
-                     footer_template=FOOTER.format(issue=issue),
+                     footer_template=FOOTER.format(footer=I18N[LANG]["footer"].format(issue=issue), page=I18N[LANG]["page"]),
                      margin={"top": "16mm", "bottom": "18mm", "left": "16mm", "right": "16mm"})
         await b.close()
 
@@ -398,12 +417,15 @@ def main():
     a = ap.parse_args()
     D = Data(a.data)
     meta, body_md = front_matter(Path(a.content).read_text())
-    mast = (f"<header class='mast'><div><div class='brand'>AD International Consulting · Market Intelligence</div>"
-            f"<h1><b>Energy</b> Market Briefing</h1></div><div class='issue'><b>{meta['issue']}</b><br>"
-            f"{meta.get('subtitle', '')}<br>Data to {meta['asof']}</div></header>")
+    global LANG
+    LANG = meta.get("lang", "en")
+    T = I18N[LANG]
+    mast = (f"<header class='mast'><div><div class='brand'>{T['brand']}</div>"
+            f"<h1>{T['h1']}</h1></div><div class='issue'><b>{meta['issue']}</b><br>"
+            f"{meta.get('subtitle', '')}<br>{T['data_to']} {meta['asof']}</div></header>")
     body = render(D, body_md, meta)
     body = body.replace("<section class='page first'>", "<section class='page first'>" + mast, 1)
-    html = f"<!doctype html><html lang='en'><head><meta charset='utf-8'><title>{meta['title']}</title><style>{CSS}</style></head><body>{body}</body></html>"
+    html = f"<!doctype html><html lang='{LANG}'><head><meta charset='utf-8'><title>{meta['title']}</title><style>{CSS}</style></head><body>{body}</body></html>"
     html_path = HERE / (Path(a.out).stem + ".html")
     html_path.write_text(html)
     asyncio.run(to_pdf(html_path, a.out, meta["issue"]))
