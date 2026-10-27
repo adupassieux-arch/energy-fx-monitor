@@ -264,7 +264,7 @@ document.getElementById("tiles").innerHTML = KEYS.map(k=>{
     `Brent closed at <b class="num">$${fmt("brent",b.last)}</b>, ${fmtPct(b.chg_ytd)} since the start of the year and ${fmtPct(b.chg_1m)} over the past month. Its 52-week range runs from $${fmt("brent",b.low_52w)} to $${fmt("brent",b.high_52w)}.`,
     `Oil volatility is at <b class="num">${(b.vol_30d*100).toFixed(0)}%</b> annualised, higher than ${(volRank("brent")*100).toFixed(0)}% of readings since 2021. A one-standard-deviation monthly move is about ±${(b.vol_30d/Math.sqrt(12)*100).toFixed(0)}%.`,
     `Brent trades <b class="num">$${D.spread.last.toFixed(2)}</b> above WTI, against a one-year average of $${D.spread.avg_1y.toFixed(2)}.`,
-    `The dollar is ${e.chg_ytd<0?"weaker":"stronger"} this year: EUR/USD ${fmtPct(e.chg_ytd)} and USD/CNY ${fmtPct(c.chg_ytd)}, with USD/CNY at <b class="num">${fmt("usdcny",c.last)}</b>.`,
+    `This year the dollar has ${e.chg_ytd<0?"gained":"lost"} ground against the euro (EUR/USD ${fmtPct(e.chg_ytd)}) and ${c.chg_ytd<0?"lost":"gained"} ground against the yuan (USD/CNY ${fmtPct(c.chg_ytd)}, now <b class="num">${fmt("usdcny",c.last)}</b>).`,
     `Over the last 90 days, Brent's daily moves were ${Math.abs(rho("brent","usdcny"))<.15?"almost unrelated to":"linked to"} USD/CNY (correlation ${rho("brent","usdcny").toFixed(2)}) and ${Math.abs(rho("brent","henry_hub"))<.15?"almost unrelated to":"linked to"} U.S. gas (${rho("brent","henry_hub").toFixed(2)}).`
   ];
   document.getElementById("readings").innerHTML = items.map(t=>`<li>${t}</li>`).join("");
