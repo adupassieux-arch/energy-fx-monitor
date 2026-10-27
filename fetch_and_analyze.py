@@ -15,6 +15,7 @@ Sources
 import io
 import json
 import sys
+import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,15 +51,30 @@ FC_VOL_WINDOW = 60     # volatility window used for forecast bands
 BACKTEST_YEARS = 3
 
 
-def get(url: str) -> str:
-    req = urllib.request.Request(url, headers={"User-Agent": "energy-fx-monitor/1.0"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read().decode("utf-8")
+def get(url: str, attempts: int = 4) -> str:
+    """Download with retries: public data servers are sometimes slow from cloud runners."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; energy-fx-monitor/1.1; +https://adupassieux-arch.github.io)",
+        "Accept": "text/csv,text/plain,*/*",
+    }
+    last = None
+    for i in range(attempts):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=90) as r:
+                return r.read().decode("utf-8")
+        except Exception as e:  # network errors, HTTP errors, timeouts
+            last = e
+            wait = 10 * 2 ** i
+            print(f"  attempt {i + 1}/{attempts} failed for {url[:80]}…: {e!r}", file=sys.stderr)
+            if i < attempts - 1:
+                time.sleep(wait)
+    raise RuntimeError(f"Download failed after {attempts} attempts: {url}") from last
 
 
 def load_fred(series_id: str) -> pd.Series:
     df = pd.read_csv(io.StringIO(get(
-        f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}")))
+        f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}&cosd={START}")))
     df.columns = ["date", "value"]
     df["date"] = pd.to_datetime(df["date"])
     df["value"] = pd.to_numeric(df["value"], errors="coerce")  # FRED uses "." for missing
@@ -143,10 +159,35 @@ def backtest(s: pd.Series, h: int = HORIZON) -> dict:
 
 def main():
     print("Downloading…")
-    frames = {k: load_fred(v) for k, v in FRED.items()}
-    fx = load_ecb()
-    frames["eurusd"] = fx["eurusd"]
-    frames["usdcny"] = fx["usdcny"]
+    # If a source is unreachable, keep last week's series for it rather than failing the update.
+    previous = {}
+    if OUT.exists():
+        prev = json.loads(OUT.read_text())
+        previous = {k: pd.Series(v["v"], index=pd.to_datetime(v["d"]))
+                    for k, v in prev.get("prices", {}).items()}
+
+    def fallback(keys, err):
+        missing = [k for k in keys if k not in previous]
+        if missing:
+            raise RuntimeError(f"No data for {missing} and no previous copy") from err
+        print(f"  WARNING: kept previous data for {keys} ({err})", file=sys.stderr)
+        stale.extend(keys)
+        return {k: previous[k] for k in keys}
+
+    frames, stale = {}, []
+    for k, sid in FRED.items():
+        try:
+            frames[k] = load_fred(sid)
+        except Exception as e:
+            frames.update(fallback([k], e))
+    try:
+        fx = load_ecb()
+        frames["eurusd"] = fx["eurusd"]
+        frames["usdcny"] = fx["usdcny"]
+    except Exception as e:
+        frames.update(fallback(["eurusd", "usdcny"], e))
+    if len(stale) == len(frames):
+        raise RuntimeError("Every source failed; leaving the dashboard unchanged.")
 
     # Each series keeps its own trading calendar for its own statistics.
     series = {k: v.sort_index() for k, v in frames.items()}
@@ -160,6 +201,7 @@ def main():
         "meta": {
             "generated_utc": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
             "start": START,
+            "stale": stale,
             "labels": LABELS,
             "sources": {
                 "brent": "FRED DCOILBRENTEU (U.S. EIA)",
